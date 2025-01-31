@@ -50,8 +50,9 @@ namespace CompactProjectiles
         {
             var startPosition = Position;
             var startVelocity = Velocity;
+            var virtualPosition = Position;
+            var virtualVelocity = Velocity;
             var totalAirTime = 0f;
-            var vChanged = false;
             var g = Gravity;
             var r = 0.5f;
             var maxItterations = 1000;
@@ -61,61 +62,61 @@ namespace CompactProjectiles
             for (int i = 0; i < maxItterations; i++)
             {
                 iterrationCount++;
-                var p = Position;
-                var v = Velocity;
+                var p = virtualPosition;
+                var v = virtualVelocity;
                 var v2 = new Vector2(new Vector2(v.x, v.z).magnitude, v.y);
 
-                var angle = Mathf.Atan2(v2.y, v2.x) * Mathf.Rad2Deg;
-                var stepped_angle = Mathf.Clamp(angle - StepAngle, -90f, 90f);
-                var stepped_v2 = Mathf.Sin(stepped_angle * Mathf.Deg2Rad) * (v2.x / Mathf.Cos(stepped_angle * Mathf.Deg2Rad));
-                var stepped_t = (stepped_v2 - v2.y) / g;
+                var rad = Mathf.Atan2(v2.y, v2.x);
+                var angle = rad * Mathf.Rad2Deg;
+                var stepped_angle = angle - StepAngle;
+                var stepped_rad = stepped_angle * Mathf.Deg2Rad;
+                var befCos = Mathf.Cos(rad);
+                var aftCos = Mathf.Cos(stepped_rad);
+                var stepped_vy = Mathf.Sin(stepped_rad) * (befCos / aftCos) * v.magnitude;
+                var stepped_t = (stepped_vy - v.y) / g;
                 if (stepped_t <= 0f)
                 {
-                    stepped_t = 1;
+                    stepped_t = 1f;
                 }
                 stepped_t = Mathf.Clamp(stepped_t, 0f, 1f);
 
                 var stepped_p = p + v * stepped_t + Vector3.up * (0.5f * g * stepped_t * stepped_t);
-
-                var raycastRequired = false;
                 var stepped_v = v + Vector3.up * g * stepped_t;
-                if (!vChanged && Vector3.Dot(stepped_v, startVelocity) < 0)
-                {
-                    vChanged = true;
-                    raycastRequired = true;
-                }
 
                 var toSteppedVec = stepped_p - p;
-                var dir = toSteppedVec.normalized;
                 var dist = toSteppedVec.magnitude;
                 raycastSkippedTotalDistance += dist;
-                raycastRequired |= raycastSkippedTotalDistance > ErrorDistance;
+                var raycastRequired = raycastSkippedTotalDistance > ErrorDistance;
                 Debug.DrawRay(stepped_p, Vector3.up, raycastRequired ? Color.red : Color.green);
                 if (raycastRequired)
                 {
+                    var rayVec = stepped_p - Position;
                     raycastSkippedTotalDistance = 0f;
                     raycastCount++;
-                    if (Physics.SphereCast(p, r, dir, out var hit, dist, LayerMask))
+                    if (Physics.SphereCast(Position, r, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
                     {
-                        var ref_p = hit.point + hit.normal * (r + 0.01f);
-                        var ref_diff_st = ref_p - startPosition;
-                        var ref_diff2_st = new Vector2(new Vector2(ref_diff_st.x, ref_diff_st.z).magnitude, ref_diff_st.y);
-                        var ref_t = ref_diff2_st.x / v2.x;
-                        var v0y = (ref_diff2_st.y - 0.5f * g * ref_t * ref_t) / ref_t;
+                        var hit_p = hit.point + hit.normal * (r + 0.01f);
+                        var hit_diff_from_st = hit_p - startPosition;
+                        var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
+                        var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
+                        var hit_t = hit_diff2_from_st.x / st_v2.x;
+                        var v0y = (hit_diff2_from_st.y - 0.5f * g * hit_t * hit_t) / hit_t;
+                        var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
+                        v0 = v0.normalized * startVelocity.magnitude; // Safety
                         var launchData = new LaunchData
                         {
                             Position = startPosition,
-                            Velocity = new Vector3(startVelocity.x, v0y, startVelocity.z),
+                            Velocity = v0,
                             Gravity = g,
-                            Duration = ref_t,
+                            Duration = hit_t,
                             IsHit = true,
                             HitPoint = hit.point,
                             HitNormal = hit.normal,
                             IterationCount = iterrationCount,
                             RaycastCount = raycastCount,
                         };
-                        Position = ref_p;
-                        Velocity = launchData.Velocity + Vector3.up * g * ref_t;
+                        Position = hit_p;
+                        Velocity = launchData.Velocity + Vector3.up * g * hit_t;
                         Velocity = Vector3.Reflect(Velocity, hit.normal);
                         var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
                         var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
@@ -126,18 +127,18 @@ namespace CompactProjectiles
                         Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
                         return launchData;
                     }
+
+                    Position = stepped_p;
+                    Velocity = stepped_v;
                 }
 
-                Position = stepped_p;
-                Velocity += Vector3.up * g * stepped_t;
+                virtualPosition = stepped_p;
+                virtualVelocity = stepped_v;
                 totalAirTime += stepped_t;
-                if (raycastCount >= MaxRaycastCount)
+                if (raycastCount >= MaxRaycastCount || totalAirTime >= MaxDuration)
                 {
-                    break;
-                }
-
-                if (totalAirTime >= MaxDuration)
-                {
+                    Position = startPosition + startVelocity * totalAirTime + Vector3.up * (0.5f * g * totalAirTime * totalAirTime);
+                    Velocity = startVelocity + Vector3.up * g * totalAirTime;
                     break;
                 }
             }

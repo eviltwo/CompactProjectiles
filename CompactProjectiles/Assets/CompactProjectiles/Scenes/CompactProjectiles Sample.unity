@@ -437,8 +437,8 @@ Transform:
   m_GameObject: {fileID: 1184913722}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.2, y: 3.26, z: 0.45}
-  m_LocalScale: {x: 8, y: 4, z: 4}
+  m_LocalPosition: {x: -8.19, y: 4.21, z: 0.45}
+  m_LocalScale: {x: 20, y: 4, z: 4}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -532,12 +532,12 @@ MonoBehaviour:
   ErrorDistance: 1
   MaxDuration: 2
   MaxRaycastCount: 5
-  Velocity: {x: 6.86, y: 5, z: 0}
+  Velocity: {x: 3.65, y: 5, z: 0}
   LayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
   SimulationCount: 10
-  DrawInfo: 1
+  DrawInfo: 0
   DrawDummyLine: 0
 --- !u!4 &1546415640
 Transform:
@@ -548,7 +548,7 @@ Transform:
   m_GameObject: {fileID: 1546415635}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 6, z: 0}
+  m_LocalPosition: {x: -17.04, y: 11.1, z: -0.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
