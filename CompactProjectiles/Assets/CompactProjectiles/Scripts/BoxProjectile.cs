@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CompactProjectiles
@@ -11,8 +12,6 @@ namespace CompactProjectiles
         public bool IsHit;
         public Vector3 HitPoint;
         public Vector3 HitNormal;
-        public int IterationCount;
-        public int RaycastCount;
     }
 
     public class BoxProjectile
@@ -33,13 +32,31 @@ namespace CompactProjectiles
 
         public float StepAngle = 45f;
 
-        public float ErrorDistance = 0.5f;
+        public float ErrorDistance = 1f;
 
         public int MaxRaycastCount = 5;
 
-        public float MaxDuration = 5f;
+        public float MaxDuration = 2f;
 
         public LayerMask LayerMask = -1;
+
+        public float SpaceToWall = 0.1f;
+
+        private SimulationState _state = new SimulationState();
+        public SimulationState LastSimulationState => _state;
+
+        public class SimulationState
+        {
+            public int IterationCount;
+            public int RaycastCount;
+            public List<Vector3> RaycastPositionLog = new List<Vector3>();
+            public void Clear()
+            {
+                IterationCount = 0;
+                RaycastCount = 0;
+                RaycastPositionLog.Clear();
+            }
+        }
 
         public BoxProjectile(PhysicsMaterial material)
         {
@@ -56,12 +73,11 @@ namespace CompactProjectiles
             var g = Gravity;
             var r = 0.5f;
             var maxItterations = 1000;
-            var raycastCount = 0;
             var raycastSkippedTotalDistance = 0f;
-            var iterrationCount = 0;
+            _state.Clear();
             for (int i = 0; i < maxItterations; i++)
             {
-                iterrationCount++;
+                _state.IterationCount++;
                 var p = virtualPosition;
                 var v = virtualVelocity;
                 var v2 = new Vector2(new Vector2(v.x, v.z).magnitude, v.y);
@@ -87,22 +103,21 @@ namespace CompactProjectiles
                 var dist = toSteppedVec.magnitude;
                 raycastSkippedTotalDistance += dist;
                 var raycastRequired = raycastSkippedTotalDistance > ErrorDistance;
-                Debug.DrawRay(stepped_p, Vector3.up, raycastRequired ? Color.red : Color.green);
                 if (raycastRequired)
                 {
+                    _state.RaycastPositionLog.Add(Position);
                     var rayVec = stepped_p - Position;
                     raycastSkippedTotalDistance = 0f;
-                    raycastCount++;
+                    _state.RaycastCount++;
                     if (Physics.SphereCast(Position, r, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
                     {
-                        var hit_p = hit.point + hit.normal * (r + 0.01f);
+                        var hit_p = hit.point + hit.normal * (r + SpaceToWall);
                         var hit_diff_from_st = hit_p - startPosition;
                         var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
                         var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
                         var hit_t = hit_diff2_from_st.x / st_v2.x;
                         var v0y = (hit_diff2_from_st.y - 0.5f * g * hit_t * hit_t) / hit_t;
                         var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
-                        v0 = v0.normalized * startVelocity.magnitude; // Safety
                         var launchData = new LaunchData
                         {
                             Position = startPosition,
@@ -112,19 +127,26 @@ namespace CompactProjectiles
                             IsHit = true,
                             HitPoint = hit.point,
                             HitNormal = hit.normal,
-                            IterationCount = iterrationCount,
-                            RaycastCount = raycastCount,
                         };
                         Position = hit_p;
                         Velocity = launchData.Velocity + Vector3.up * g * hit_t;
                         Velocity = Vector3.Reflect(Velocity, hit.normal);
-                        var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
-                        var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
-                        var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
-                        Velocity -= Vector3.ProjectOnPlane(Velocity, Vector3.up) * friction;
-                        var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
-                        var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
-                        Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
+
+                        if (PhysicsMaterial == null)
+                        {
+                            Velocity -= Vector3.Project(Velocity, hit.normal) * 0.5f;
+                        }
+                        else
+                        {
+                            var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
+                            var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
+                            var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
+                            Velocity -= Vector3.ProjectOnPlane(Velocity, Vector3.up) * friction;
+                            var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
+                            var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
+                            Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
+                        }
+
                         return launchData;
                     }
 
@@ -135,10 +157,10 @@ namespace CompactProjectiles
                 virtualPosition = stepped_p;
                 virtualVelocity = stepped_v;
                 totalAirTime += stepped_t;
-                if (raycastCount >= MaxRaycastCount || totalAirTime >= MaxDuration)
+                if (_state.RaycastCount >= MaxRaycastCount || totalAirTime >= MaxDuration)
                 {
-                    Position = startPosition + startVelocity * totalAirTime + Vector3.up * (0.5f * g * totalAirTime * totalAirTime);
-                    Velocity = startVelocity + Vector3.up * g * totalAirTime;
+                    Position = virtualPosition;
+                    Velocity = virtualVelocity;
                     break;
                 }
             }
@@ -150,8 +172,6 @@ namespace CompactProjectiles
                 Gravity = g,
                 Duration = totalAirTime,
                 IsHit = false,
-                IterationCount = iterrationCount,
-                RaycastCount = raycastCount,
             };
         }
     }
