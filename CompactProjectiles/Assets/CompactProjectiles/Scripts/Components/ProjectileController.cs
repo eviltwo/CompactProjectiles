@@ -16,6 +16,8 @@ namespace CompactProjectiles
 
         public Vector3 Velocity = Vector3.right;
 
+        public Vector3 AngularVelocity = Vector3.zero;
+
         private BoxProjectile _projectile;
 
         public LayerMask LayerMask = -1;
@@ -32,6 +34,8 @@ namespace CompactProjectiles
             _projectile = new BoxProjectile(shapeData, PhysicsMaterial);
             _projectile.Position = transform.position;
             _projectile.Velocity = Velocity;
+            _projectile.Rotation = transform.rotation;
+            _projectile.AngularVelocity = AngularVelocity;
         }
 
         private void Update()
@@ -51,11 +55,14 @@ namespace CompactProjectiles
             if (_lastLaunchData.IsSleep)
             {
                 transform.position = _projectile.Position;
+                transform.rotation = _projectile.Rotation;
             }
             else
             {
                 ProjectileUtility.LaunchSimulation(_lastLaunchData, _animElapsedTime, out var p);
                 transform.position = p;
+                var angularVelocity = _lastLaunchData.AngularVelocity;
+                transform.rotation = ProjectileUtility.ApplyAngularVelocity(_lastLaunchData.Rotation, angularVelocity, _animElapsedTime);
             }
         }
     }

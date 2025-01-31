@@ -7,6 +7,8 @@ namespace CompactProjectiles
     {
         public Vector3 Position;
         public Vector3 Velocity;
+        public Quaternion Rotation;
+        public Vector3 AngularVelocity;
         public float Gravity;
         public float Duration;
         public bool IsHit;
@@ -33,6 +35,15 @@ namespace CompactProjectiles
 
         public Vector3 Velocity;
 
+        public Quaternion Rotation = Quaternion.identity;
+
+        // Angular velocity in radian per second
+        // vQ = ƒÖ * rMQ
+        // vQ : velocity of point Q
+        // ƒÖ : angular velocity
+        // rMQ : vector from M to Q (M is the instant center of rotation)
+        public Vector3 AngularVelocity;
+
         public float StepAngle = 45f;
 
         public float ErrorDistance = 1f;
@@ -47,7 +58,7 @@ namespace CompactProjectiles
 
         public float SleepPositionThreshold = 0.1f;
 
-        public float SleepVelocityThreshold = 0.1f;
+        public float SleepVelocityThreshold = 0.5f;
 
         private SimulationState _state = new SimulationState();
         public SimulationState LastSimulationState => _state;
@@ -75,8 +86,12 @@ namespace CompactProjectiles
         {
             var startPosition = Position;
             var startVelocity = Velocity;
+            var startRotation = Rotation;
+            var startAngularVelocity = AngularVelocity;
             var virtualPosition = Position;
             var virtualVelocity = Velocity;
+            var virtualRotation = Rotation;
+            var virtualAngularVelocity = AngularVelocity;
             var totalAirTime = 0f;
             var g = Gravity;
             var r = Mathf.Max(Shape.Size.x, Shape.Size.y, Shape.Size.z) * 0.5f;
@@ -133,7 +148,9 @@ namespace CompactProjectiles
                             return new LaunchData
                             {
                                 Position = startPosition,
-                                Velocity = startVelocity,
+                                Velocity = Vector3.zero,
+                                Rotation = startRotation,
+                                AngularVelocity = Vector3.zero,
                                 Gravity = g,
                                 Duration = 0f,
                                 IsHit = false,
@@ -162,6 +179,8 @@ namespace CompactProjectiles
                         {
                             Position = startPosition,
                             Velocity = v0,
+                            Rotation = startRotation,
+                            AngularVelocity = startAngularVelocity,
                             Gravity = g,
                             Duration = hit_t,
                             IsHit = true,
@@ -187,11 +206,20 @@ namespace CompactProjectiles
                             Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
                         }
 
+                        // Update rotation
+                        Rotation = ProjectileUtility.ApplyAngularVelocity(startRotation, startAngularVelocity, hit_t);
+
+                        // Calculate angular velocity
+                        var planeV = Vector3.ProjectOnPlane(Velocity, hit.normal);
+                        var axis = Vector3.Cross(hit.normal, planeV.normalized);
+                        AngularVelocity = axis * (planeV.magnitude / r);
+
                         return launchData;
                     }
 
                     Position = stepped_p;
                     Velocity = stepped_v;
+                    Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, stepped_t);
                 }
 
                 virtualPosition = stepped_p;
@@ -269,6 +297,13 @@ namespace CompactProjectiles
                 default:
                     return 0f;
             }
+        }
+
+        public static Quaternion ApplyAngularVelocity(Quaternion rotation, Vector3 angularVelocity, float deltaTime)
+        {
+            var axis = angularVelocity.normalized;
+            var angle = angularVelocity.magnitude * Mathf.Rad2Deg * deltaTime;
+            return Quaternion.AngleAxis(angle, axis) * rotation;
         }
     }
 }

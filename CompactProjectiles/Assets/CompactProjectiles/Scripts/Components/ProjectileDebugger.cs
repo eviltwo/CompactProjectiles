@@ -68,16 +68,15 @@ namespace CompactProjectiles
                 };
 
                 var data = projectile.Simulate();
-
-                var drawStep = 0.01f;
-                Gizmos.color = Color.red;
-                var lastPos = data.Position;
                 if (data.IsSleep)
                 {
                     break;
                 }
 
-                for (var t = 0f; t < data.Duration && t < 10; t += drawStep)
+                var lineDrawStep = 0.01f;
+                var lastPos = data.Position;
+                Gizmos.color = Color.red;
+                for (var t = 0f; t < data.Duration && t < 10; t += lineDrawStep)
                 {
                     ProjectileUtility.LaunchSimulation(data, t, out var p);
                     Gizmos.DrawLine(lastPos, p);
@@ -90,8 +89,21 @@ namespace CompactProjectiles
                     Gizmos.DrawSphere(pos, 0.1f);
                 }
 
+                var cubeDrawStep = 0.2f;
+                Gizmos.color = new Color(1, 0, 0, 0.25f);
+                for (var t = 0f; t < data.Duration && t < 10; t += cubeDrawStep)
+                {
+                    ProjectileUtility.LaunchSimulation(data, t, out var p);
+                    var rot = ProjectileUtility.ApplyAngularVelocity(data.Rotation, data.AngularVelocity, t);
+                    Gizmos.matrix = Matrix4x4.TRS(p, rot, Vector3.one);
+                    Gizmos.DrawWireCube(Vector3.zero, ShapeData.Size);
+                }
+                Gizmos.matrix = Matrix4x4.identity;
+
                 Gizmos.color = new Color(1, 0, 0, 0.5f);
-                Gizmos.DrawWireCube(lastPos, Vector3.one);
+                Gizmos.matrix = Matrix4x4.TRS(projectile.Position, projectile.Rotation, Vector3.one);
+                Gizmos.DrawWireCube(Vector3.zero, Vector3.one);
+                Gizmos.matrix = Matrix4x4.identity;
 
 #if UNITY_EDITOR
                 if (DrawInfo)
@@ -112,7 +124,7 @@ namespace CompactProjectiles
                     Gizmos.color = Color.green;
                     customData.Duration = 10;
                     lastPos = customData.Position;
-                    for (var t = 0f; t < customData.Duration; t += drawStep)
+                    for (var t = 0f; t < customData.Duration; t += lineDrawStep)
                     {
                         ProjectileUtility.LaunchSimulation(customData, t, out var p);
                         Gizmos.DrawLine(lastPos, p);
