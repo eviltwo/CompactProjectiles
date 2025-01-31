@@ -43,9 +43,9 @@ namespace CompactProjectiles
 
         public float SpaceToWall = 0.1f;
 
-        public float SleepPositionError = 0.1f;
+        public float SleepPositionThreshold = 0.1f;
 
-        public float SleepVelocityError = 0.1f;
+        public float SleepVelocityThreshold = 0.1f;
 
         private SimulationState _state = new SimulationState();
         public SimulationState LastSimulationState => _state;
@@ -124,8 +124,8 @@ namespace CompactProjectiles
                     {
                         var hit_p = hit.point + hit.normal * r;
                         var hit_diff_from_st = hit_p - startPosition;
-                        if (hit_diff_from_st.sqrMagnitude < SleepPositionError * SleepPositionError
-                            && startVelocity.sqrMagnitude < SleepVelocityError * SleepVelocityError)
+                        if (hit_diff_from_st.sqrMagnitude < SleepPositionThreshold * SleepPositionThreshold
+                            && startVelocity.sqrMagnitude < SleepVelocityThreshold * SleepVelocityThreshold)
                         {
                             return new LaunchData
                             {
