@@ -44,8 +44,15 @@ namespace CompactProjectiles
                 _lastLaunchData = _projectile.Simulate();
             }
 
-            ProjectileUtility.LaunchSimulation(_lastLaunchData, _animElapsedTime, out var p);
-            transform.position = p;
+            if (_lastLaunchData.IsSleep)
+            {
+                transform.position = _projectile.Position;
+            }
+            else
+            {
+                ProjectileUtility.LaunchSimulation(_lastLaunchData, _animElapsedTime, out var p);
+                transform.position = p;
+            }
         }
     }
 }

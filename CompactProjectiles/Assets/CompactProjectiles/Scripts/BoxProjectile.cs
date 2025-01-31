@@ -12,6 +12,7 @@ namespace CompactProjectiles
         public bool IsHit;
         public Vector3 HitPoint;
         public Vector3 HitNormal;
+        public bool IsSleep;
     }
 
     public class BoxProjectile
@@ -80,21 +81,27 @@ namespace CompactProjectiles
                 _state.IterationCount++;
                 var p = virtualPosition;
                 var v = virtualVelocity;
-                var v2 = new Vector2(new Vector2(v.x, v.z).magnitude, v.y);
-
-                var rad = Mathf.Atan2(v2.y, v2.x);
-                var angle = rad * Mathf.Rad2Deg;
-                var stepped_angle = angle - StepAngle;
-                var stepped_rad = stepped_angle * Mathf.Deg2Rad;
-                var befCos = Mathf.Cos(rad);
-                var aftCos = Mathf.Cos(stepped_rad);
-                var stepped_vy = Mathf.Sin(stepped_rad) * (befCos / aftCos) * v.magnitude;
-                var stepped_t = (stepped_vy - v.y) / g;
-                if (stepped_t <= 0f)
+                var stepped_t = 1f;
+                if (v.sqrMagnitude > 0)
                 {
-                    stepped_t = 1f;
+                    var v2 = new Vector2(new Vector2(v.x, v.z).magnitude, v.y);
+                    var rad = Mathf.Atan2(v2.y, v2.x);
+                    var angle = rad * Mathf.Rad2Deg;
+                    var stepped_angle = angle - StepAngle;
+                    if (stepped_angle > -90 && stepped_angle < 90)
+                    {
+                        var stepped_rad = stepped_angle * Mathf.Deg2Rad;
+                        var befCos = Mathf.Cos(rad);
+                        var aftCos = Mathf.Cos(stepped_rad);
+                        var stepped_vy = Mathf.Sin(stepped_rad) * (befCos / aftCos) * v.magnitude;
+                        stepped_t = (stepped_vy - v.y) / g;
+                        if (stepped_t <= 0f)
+                        {
+                            stepped_t = 1f;
+                        }
+                        stepped_t = Mathf.Clamp(stepped_t, 0f, 1f);
+                    }
                 }
-                stepped_t = Mathf.Clamp(stepped_t, 0f, 1f);
 
                 var stepped_p = p + v * stepped_t + Vector3.up * (0.5f * g * stepped_t * stepped_t);
                 var stepped_v = v + Vector3.up * g * stepped_t;
@@ -109,14 +116,39 @@ namespace CompactProjectiles
                     var rayVec = stepped_p - Position;
                     raycastSkippedTotalDistance = 0f;
                     _state.RaycastCount++;
-                    if (Physics.SphereCast(Position, r, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
+                    if (Physics.SphereCast(Position, r - SpaceToWall, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
                     {
-                        var hit_p = hit.point + hit.normal * (r + SpaceToWall);
+                        var hit_p = hit.point + hit.normal * r;
                         var hit_diff_from_st = hit_p - startPosition;
+                        if (hit_diff_from_st.sqrMagnitude < 0.01f && startVelocity.sqrMagnitude < 0.01f)
+                        {
+                            return new LaunchData
+                            {
+                                Position = startPosition,
+                                Velocity = startVelocity,
+                                Gravity = g,
+                                Duration = 0f,
+                                IsHit = false,
+                                IsSleep = true,
+                            };
+                        }
+
                         var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
                         var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
-                        var hit_t = hit_diff2_from_st.x / st_v2.x;
-                        var v0y = (hit_diff2_from_st.y - 0.5f * g * hit_t * hit_t) / hit_t;
+                        var hit_t = 0f;
+                        var v0y = 0f;
+                        if (st_v2.x > 0)
+                        {
+                            hit_t = hit_diff2_from_st.x / st_v2.x;
+                            v0y = (hit_diff2_from_st.y - 0.5f * g * hit_t * hit_t) / hit_t;
+                        }
+                        else
+                        {
+                            hit_t = AproximateT(st_v2.y, g, hit_diff2_from_st.y);
+                            v0y = st_v2.y;
+                        }
+
+                        hit_t = Mathf.Clamp(hit_t, 0.0001f, 100f);
                         var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
                         var launchData = new LaunchData
                         {
@@ -172,7 +204,18 @@ namespace CompactProjectiles
                 Gravity = g,
                 Duration = totalAirTime,
                 IsHit = false,
+                IsSleep = false,
             };
+        }
+
+        private float AproximateT(float v0, float a, float d)
+        {
+            var v0sqr = v0 * v0;
+            var ad2 = a * d * 2;
+            var sqrt = Mathf.Sqrt(v0sqr + ad2);
+            var t1 = (-v0 + sqrt) / a;
+            var t2 = (-v0 - sqrt) / a;
+            return Mathf.Max(t1, t2);
         }
     }
 

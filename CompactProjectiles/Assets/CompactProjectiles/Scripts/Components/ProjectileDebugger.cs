@@ -30,8 +30,13 @@ namespace CompactProjectiles
 
         public bool DrawDummyLine;
 
-        private void OnDrawGizmosSelected()
+        private void OnDrawGizmos()
         {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+
             for (int i = 0; i < LineCount; i++)
             {
                 var angle = i * 360f / LineCount;
@@ -65,7 +70,12 @@ namespace CompactProjectiles
                 var drawStep = 0.01f;
                 Gizmos.color = Color.red;
                 var lastPos = data.Position;
-                for (var t = 0f; t < data.Duration; t += drawStep)
+                if (data.IsSleep)
+                {
+                    break;
+                }
+
+                for (var t = 0f; t < data.Duration && t < 10; t += drawStep)
                 {
                     ProjectileUtility.LaunchSimulation(data, t, out var p);
                     Gizmos.DrawLine(lastPos, p);
