@@ -103,9 +103,12 @@ namespace CompactProjectiles
                 _state.IterationCount++;
                 var p = virtualPosition;
                 var v = virtualVelocity;
+
+                // Get step time.
                 var stepped_t = 1f;
                 if (v.sqrMagnitude > 0)
                 {
+                    // Get time at the point where the angle changes significantly.
                     var v2 = new Vector2(new Vector2(v.x, v.z).magnitude, v.y);
                     var rad = Mathf.Atan2(v2.y, v2.x);
                     var angle = rad * Mathf.Rad2Deg;
@@ -128,6 +131,7 @@ namespace CompactProjectiles
                 var stepped_p = p + v * stepped_t + Vector3.up * (0.5f * g * stepped_t * stepped_t);
                 var stepped_v = v + Vector3.up * g * stepped_t;
 
+                // Execute the raycast or proceed to the next step without doing anything.
                 var toSteppedVec = stepped_p - p;
                 var dist = toSteppedVec.magnitude;
                 raycastSkippedTotalDistance += dist;
@@ -135,13 +139,15 @@ namespace CompactProjectiles
                 if (raycastRequired)
                 {
                     _state.RaycastPositionLog.Add(Position);
-                    var rayVec = stepped_p - Position;
+                    var rayVec = stepped_p - Position; // Start from the point where the last raycast was completed.
                     raycastSkippedTotalDistance = 0f;
                     _state.RaycastCount++;
                     if (Physics.SphereCast(Position, r - SpaceToWall, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
                     {
                         var hit_p = hit.point + hit.normal * r;
                         var hit_diff_from_st = hit_p - startPosition;
+
+                        // Sleep check
                         if (hit_diff_from_st.sqrMagnitude < SleepPositionThreshold * SleepPositionThreshold
                             && startVelocity.sqrMagnitude < SleepVelocityThreshold * SleepVelocityThreshold)
                         {
@@ -158,6 +164,8 @@ namespace CompactProjectiles
                             };
                         }
 
+                        // Calculate time to hit and velocity.
+                        // * Recalculate the initial velocity to match the parabola to the hit point.
                         var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
                         var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
                         var hit_t = 0f;
@@ -172,9 +180,10 @@ namespace CompactProjectiles
                             hit_t = AproximateT(st_v2.y, g, hit_diff2_from_st.y);
                             v0y = st_v2.y;
                         }
-
                         hit_t = Mathf.Clamp(hit_t, 0.0001f, 100f);
                         var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
+
+                        // Finalize the launch data.
                         var launchData = new LaunchData
                         {
                             Position = startPosition,
@@ -187,6 +196,8 @@ namespace CompactProjectiles
                             HitPoint = hit.point,
                             HitNormal = hit.normal,
                         };
+
+                        // Calculate the position and velocity after reflection.
                         Position = hit_p;
                         Velocity = launchData.Velocity + Vector3.up * g * hit_t;
                         Velocity = Vector3.Reflect(Velocity, hit.normal);
@@ -206,7 +217,7 @@ namespace CompactProjectiles
                             Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
                         }
 
-                        // Update rotation
+                        // Calculate rotation
                         Rotation = ProjectileUtility.ApplyAngularVelocity(startRotation, startAngularVelocity, hit_t);
 
                         // Calculate angular velocity
@@ -222,6 +233,8 @@ namespace CompactProjectiles
                     Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, stepped_t);
                 }
 
+                // Update the virtual transform.
+                // The transform is not finalized until the raycast is complete.
                 virtualPosition = stepped_p;
                 virtualVelocity = stepped_v;
                 totalAirTime += stepped_t;
