@@ -25,7 +25,11 @@ namespace CompactProjectiles
 
         private void Awake()
         {
-            _projectile = new BoxProjectile(PhysicsMaterial);
+            var shapeData = new BoxProjectile.ShapeData
+            {
+                Size = transform.localScale,
+            };
+            _projectile = new BoxProjectile(shapeData, PhysicsMaterial);
             _projectile.Position = transform.position;
             _projectile.Velocity = Velocity;
         }

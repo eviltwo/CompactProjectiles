@@ -25,6 +25,8 @@ namespace CompactProjectiles
 
         public float Gravity = -9.8f;
 
+        public ShapeData Shape;
+
         public PhysicsMaterial PhysicsMaterial;
 
         public Vector3 Position;
@@ -63,8 +65,9 @@ namespace CompactProjectiles
             }
         }
 
-        public BoxProjectile(PhysicsMaterial material)
+        public BoxProjectile(ShapeData shapeData, PhysicsMaterial material)
         {
+            Shape = shapeData;
             PhysicsMaterial = material;
         }
 
@@ -76,7 +79,7 @@ namespace CompactProjectiles
             var virtualVelocity = Velocity;
             var totalAirTime = 0f;
             var g = Gravity;
-            var r = 0.5f;
+            var r = Mathf.Max(Shape.Size.x, Shape.Size.y, Shape.Size.z) * 0.5f;
             var maxItterations = 100;
             var raycastSkippedTotalDistance = 0f;
             _state.Clear();

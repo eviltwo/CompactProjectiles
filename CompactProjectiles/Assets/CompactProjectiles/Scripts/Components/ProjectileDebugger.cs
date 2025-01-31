@@ -4,6 +4,8 @@ namespace CompactProjectiles
 {
     public class ProjectileDebugger : MonoBehaviour
     {
+        public BoxProjectile.ShapeData ShapeData;
+
         public PhysicsMaterial PhysicsMaterial;
 
         public float StepAngle = 45f;
@@ -48,7 +50,7 @@ namespace CompactProjectiles
 
         private void SimulateAndDrawGizmos(Vector3 velocity)
         {
-            var projectile = new BoxProjectile(PhysicsMaterial);
+            var projectile = new BoxProjectile(ShapeData, PhysicsMaterial);
             projectile.Position = transform.position;
             projectile.Velocity = velocity;
             projectile.StepAngle = StepAngle;
