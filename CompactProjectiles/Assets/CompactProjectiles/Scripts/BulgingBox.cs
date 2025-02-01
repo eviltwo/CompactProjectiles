@@ -114,7 +114,6 @@ namespace CompactProjectiles
         {
             var matrix = Matrix4x4.TRS(Position, Rotation, Scale).inverse;
             var localVector = matrix.MultiplyVector(worldVector);
-            localVector = InvertBulge(localVector);
             return localVector;
         }
 
@@ -161,7 +160,7 @@ namespace CompactProjectiles
                 var x = Mathf.Abs(localPoint[d]);
                 var inner = Mathf.Min(HalfBoxSize, x);
                 var outer = Mathf.Max(0, x - HalfBoxSize);
-                outer *= 1 / bulge;
+                outer = outer / bulge;
                 localPoint[d] = Mathf.Sign(localPoint[d]) * (inner + outer);
             }
 
@@ -184,18 +183,11 @@ namespace CompactProjectiles
             return faceIndex;
         }
 
-        public Vector3 GetSurfacePoint(Vector3 direction)
+        public Vector3 GetClosestSurfacePoint(Vector3 position)
         {
-            var localDirection = WorldToSphereDirection(direction);
-            return SphereToWorldPoint(localDirection * LocalSphereRadius);
-        }
-
-        public void GetClosestSurfacePoint(Vector3 direction, out Vector3 point, out Vector3 normal)
-        {
-            var localDirection = WorldToSphereDirection(direction);
-            var localPoint = localDirection * LocalSphereRadius;
-            point = SphereToWorldPoint(localPoint);
-            normal = SphereToWorldDirection(localPoint).normalized;
+            var direction = (position - Position).normalized;
+            var localSurface = WorldToSphereDirection(direction) * LocalSphereRadius;
+            return SphereToWorldPoint(localSurface);
         }
     }
 }
