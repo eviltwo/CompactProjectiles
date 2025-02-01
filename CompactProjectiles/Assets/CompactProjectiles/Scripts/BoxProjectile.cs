@@ -23,6 +23,18 @@ namespace CompactProjectiles
         public class ShapeData
         {
             public Vector3 Size = Vector3.one;
+
+            public float XPositiveBulge;
+
+            public float XNegativeBulge;
+
+            public float YPositiveBulge;
+
+            public float YNegativeBulge;
+
+            public float ZPositiveBulge;
+
+            public float ZNegativeBulge;
         }
 
         public float Gravity = -9.8f;
@@ -56,29 +68,42 @@ namespace CompactProjectiles
 
         public float SpaceToWall = 0.1f;
 
-        public float SleepPositionThreshold = 0.1f;
+        public float SleepPositionThreshold = 0.01f;
 
-        public float SleepVelocityThreshold = 0.5f;
+        public float SleepVelocityThreshold = 0.1f;
 
         private SimulationState _state = new SimulationState();
         public SimulationState LastSimulationState => _state;
+
+        private BulgingBox _box = new BulgingBox();
+        public BulgingBox Box => _box;
 
         public class SimulationState
         {
             public int IterationCount;
             public int RaycastCount;
             public List<Vector3> RaycastPositionLog = new List<Vector3>();
+            public Vector3 BoxHitPosition;
             public void Clear()
             {
                 IterationCount = 0;
                 RaycastCount = 0;
                 RaycastPositionLog.Clear();
+                BoxHitPosition = Vector3.zero;
             }
         }
 
         public BoxProjectile(ShapeData shapeData, PhysicsMaterial material)
         {
             Shape = shapeData;
+            _box.Scale = shapeData.Size;
+            _box.XPositiveBulge = shapeData.XPositiveBulge;
+            _box.XNegativeBulge = shapeData.XNegativeBulge;
+            _box.YPositiveBulge = shapeData.YPositiveBulge;
+            _box.YNegativeBulge = shapeData.YNegativeBulge;
+            _box.ZPositiveBulge = shapeData.ZPositiveBulge;
+            _box.ZNegativeBulge = shapeData.ZNegativeBulge;
+
             PhysicsMaterial = material;
         }
 
@@ -199,29 +224,34 @@ namespace CompactProjectiles
 
                         // Calculate the position and velocity after reflection.
                         Position = hit_p;
+                        Rotation = ProjectileUtility.ApplyAngularVelocity(startRotation, startAngularVelocity, hit_t);
                         Velocity = launchData.Velocity + Vector3.up * g * hit_t;
-                        Velocity = Vector3.Reflect(Velocity, hit.normal);
+
+                        _box.Position = Position;
+                        _box.Rotation = Rotation;
+                        var hitPosition = _box.GetClosestSurfaceWithPlane(hit.normal);
+                        _state.BoxHitPosition = hitPosition;
+                        var hitNormal = (Position - hitPosition).normalized;
+
+                        Velocity = Vector3.Reflect(Velocity, hitNormal);
 
                         if (PhysicsMaterial == null)
                         {
-                            Velocity -= Vector3.Project(Velocity, hit.normal) * 0.5f;
+                            Velocity -= Vector3.Project(Velocity, hitNormal) * 0.5f;
                         }
                         else
                         {
                             var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
                             var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
                             var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
-                            Velocity -= Vector3.ProjectOnPlane(Velocity, Vector3.up) * friction;
+                            Velocity -= Vector3.ProjectOnPlane(Velocity, hitNormal) * friction;
                             var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
                             var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
-                            Velocity -= Vector3.Project(Velocity, hit.normal) * (1 - bounce);
+                            Velocity -= Vector3.Project(Velocity, hitNormal) * (1 - bounce);
                         }
 
-                        // Calculate rotation
-                        Rotation = ProjectileUtility.ApplyAngularVelocity(startRotation, startAngularVelocity, hit_t);
-
                         // Calculate angular velocity
-                        var planeV = Vector3.ProjectOnPlane(Velocity, hit.normal);
+                        var planeV = Vector3.ProjectOnPlane(Velocity, hitNormal);
                         var axis = Vector3.Cross(hit.normal, planeV.normalized);
                         AngularVelocity = axis * (planeV.magnitude / r);
 
@@ -231,6 +261,8 @@ namespace CompactProjectiles
                     Position = stepped_p;
                     Velocity = stepped_v;
                     Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, stepped_t);
+                    _box.Position = Position;
+                    _box.Rotation = Rotation;
                 }
 
                 // Update the virtual transform.
@@ -242,6 +274,9 @@ namespace CompactProjectiles
                 {
                     Position = virtualPosition;
                     Velocity = virtualVelocity;
+                    Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, totalAirTime);
+                    _box.Position = Position;
+                    _box.Rotation = Rotation;
                     break;
                 }
             }

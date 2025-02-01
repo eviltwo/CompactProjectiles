@@ -4,6 +4,8 @@ namespace CompactProjectiles
 {
     public class ProjectileController : MonoBehaviour
     {
+        public BoxProjectile.ShapeData ShapeData;
+
         public PhysicsMaterial PhysicsMaterial;
 
         public float StepAngle = 45f;
@@ -27,11 +29,8 @@ namespace CompactProjectiles
 
         private void Awake()
         {
-            var shapeData = new BoxProjectile.ShapeData
-            {
-                Size = transform.localScale,
-            };
-            _projectile = new BoxProjectile(shapeData, PhysicsMaterial);
+            ShapeData.Size = Vector3.Scale(ShapeData.Size, transform.localScale);
+            _projectile = new BoxProjectile(ShapeData, PhysicsMaterial);
             _projectile.Position = transform.position;
             _projectile.Velocity = Velocity;
             _projectile.Rotation = transform.rotation;
@@ -64,6 +63,20 @@ namespace CompactProjectiles
                 var angularVelocity = _lastLaunchData.AngularVelocity;
                 transform.rotation = ProjectileUtility.ApplyAngularVelocity(_lastLaunchData.Rotation, angularVelocity, _animElapsedTime);
             }
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            Gizmos.color = _lastLaunchData.IsSleep ? Color.blue : Color.red;
+            BulgingBoxUtility.DrawBoxGizmos(_projectile.Box, 5);
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(_projectile.LastSimulationState.BoxHitPosition, 0.1f);
         }
     }
 }
