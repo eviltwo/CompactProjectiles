@@ -71,32 +71,5 @@ namespace CompactProjectiles
                 }
             }
         }
-
-        /*
-        private void DrawFace(BulgingBox box, int dir, Vector3 localDirection, int lineCount)
-        {
-            for (int i = 0; i < lineCount; i++)
-            {
-                var d2 = (dir + 1) % 3;
-                var d3 = (dir + 2) % 3;
-                for (int j = 0; j < lineCount - 1; j++)
-                {
-                    var count = lineCount - 1;
-                    var p1 = localDirection;
-                    var p2 = localDirection;
-                    p1[d2] = (float)i / count - 0.5f;
-                    p1[d3] = (float)j / count - 0.5f;
-                    p2[d2] = (float)i / count - 0.5f;
-                    p2[d3] = (float)(j + 1) / count - 0.5f;
-                    Gizmos.DrawLine(box.SphereToWorld(p1), box.SphereToWorld(p2));
-                    p1[d3] = (float)i / count - 0.5f;
-                    p1[d2] = (float)j / count - 0.5f;
-                    p2[d3] = (float)i / count - 0.5f;
-                    p2[d2] = (float)(j + 1) / count - 0.5f;
-                    Gizmos.DrawLine(box.SphereToWorld(p1), box.SphereToWorld(p2));
-                }
-            }
-        }
-        */
     }
 }
