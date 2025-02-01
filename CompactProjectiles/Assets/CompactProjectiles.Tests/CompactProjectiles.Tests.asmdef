@@ -1,0 +1,18 @@
+{
+    "name": "CompactProjectiles.Tests",
+    "rootNamespace": "CompactProjectiles.Tests",
+    "references": [
+        "GUID:abc23c1473b6edc45a8fb81964b2a9d3"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
