@@ -37,14 +37,6 @@ namespace CompactProjectiles
                 Gizmos.DrawLine(transform.position, point);
             }
 
-            // Draw vector
-            {
-                var v = box.WorldToSphereVector(transform.position - box.Position);
-                Gizmos.color = new Color(0, 1, 0, 0.5f);
-                Gizmos.DrawSphere(box.Position + v, 0.01f);
-                Gizmos.DrawLine(box.Position, box.Position + v);
-            }
-
             // Draw point by plane
             {
                 var point = box.GetClosestSurfaceWithPlane(transform.up);
