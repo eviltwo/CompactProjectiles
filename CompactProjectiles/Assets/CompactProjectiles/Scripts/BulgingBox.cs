@@ -104,7 +104,7 @@ namespace CompactProjectiles
 
         public Vector3 SphereToWorldVector(Vector3 localVector)
         {
-            localVector = ApplyBulge(localVector);
+            localVector = InvertBulge(localVector);
             var matrix = Matrix4x4.TRS(Position, Rotation, Scale);
             var worldDirection = matrix.MultiplyVector(localVector);
             return worldDirection;
@@ -114,6 +114,7 @@ namespace CompactProjectiles
         {
             var matrix = Matrix4x4.TRS(Position, Rotation, Scale).inverse;
             var localVector = matrix.MultiplyVector(worldVector);
+            localVector = ApplyBulge(localVector);
             return localVector;
         }
 
@@ -183,11 +184,16 @@ namespace CompactProjectiles
             return faceIndex;
         }
 
-        public Vector3 GetClosestSurfacePoint(Vector3 position)
+        public Vector3 GetClosestSurface(Vector3 position)
         {
-            var direction = (position - Position).normalized;
-            var localSurface = WorldToSphereDirection(direction) * LocalSphereRadius;
-            return SphereToWorldPoint(localSurface);
+            var dir = WorldToSphereDirection(position - Position);
+            return SphereToWorldPoint(dir * LocalSphereRadius);
+        }
+
+        public Vector3 GetClosestSurfaceWithPlane(Vector3 normal)
+        {
+            var dir = WorldToSphereDirection(-normal);
+            return SphereToWorldPoint(dir * LocalSphereRadius);
         }
     }
 }
