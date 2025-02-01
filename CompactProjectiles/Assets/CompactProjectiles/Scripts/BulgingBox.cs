@@ -16,7 +16,7 @@ namespace CompactProjectiles
 
         private static float _halfBoxSize = 0.5f;
 
-        public static float HalfBoxSize => 0.5f;
+        public static float HalfBoxSize => _halfBoxSize;
 
         private static float _localSphereRadius = Mathf.Sqrt(3) * HalfBoxSize;
 
@@ -81,39 +81,88 @@ namespace CompactProjectiles
             }
         }
 
-        public Vector3 SphereToWorld(Vector3 localPoint)
+        public void SetBulge(int faceIndex, float bulge)
         {
-            var faceIndex = FindFaceIndex(localPoint);
-            var bulge = _bulges[faceIndex];
-            for (var d = 0; d < 3; d++)
-            {
-                var inner = Mathf.Min(HalfBoxSize, Mathf.Abs(localPoint[d]));
-                var outer = Mathf.Max(0, Mathf.Abs(localPoint[d]) - HalfBoxSize);
-                outer *= bulge;
-                localPoint[d] = Mathf.Sign(localPoint[d]) * (inner + outer);
-            }
+            _bulges[faceIndex] = bulge;
+        }
 
+        public Vector3 SphereToWorldPoint(Vector3 localPoint)
+        {
+            localPoint = ApplyBulge(localPoint);
             var matrix = Matrix4x4.TRS(Position, Rotation, Scale);
             var worldPoint = matrix.MultiplyPoint3x4(localPoint);
             return worldPoint;
         }
 
-        public Vector3 WorldToSphere(Vector3 worldPoint)
+        public Vector3 WorldToSpherePoint(Vector3 worldPoint)
         {
             var matrix = Matrix4x4.TRS(Position, Rotation, Scale).inverse;
             var localPoint = matrix.MultiplyPoint3x4(worldPoint);
+            localPoint = InvertBulge(localPoint);
+            return localPoint;
+        }
 
-            var faceIndex = FindFaceIndex(localPoint);
-            var bulge = _bulges[faceIndex];
-            if (bulge != 0)
+        public Vector3 SphereToWorldVector(Vector3 localVector)
+        {
+            localVector = ApplyBulge(localVector);
+            var matrix = Matrix4x4.TRS(Position, Rotation, Scale);
+            var worldDirection = matrix.MultiplyVector(localVector);
+            return worldDirection;
+        }
+
+        public Vector3 WorldToSphereVector(Vector3 worldVector)
+        {
+            var matrix = Matrix4x4.TRS(Position, Rotation, Scale).inverse;
+            var localVector = matrix.MultiplyVector(worldVector);
+            localVector = InvertBulge(localVector);
+            return localVector;
+        }
+
+        public Vector3 SphereToWorldDirection(Vector3 localDirection)
+        {
+            return SphereToWorldVector(localDirection).normalized;
+        }
+
+        public Vector3 WorldToSphereDirection(Vector3 worldDirection)
+        {
+            return WorldToSphereVector(worldDirection).normalized;
+        }
+
+        private Vector3 ApplyBulge(Vector3 localPoint)
+        {
+            for (var d = 0; d < 3; d++)
             {
-                for (var d = 0; d < 3; d++)
+                var v = Vector3.zero;
+                v[d] = localPoint[d];
+                var faceIndex = FindFaceIndex(v);
+                var bulge = _bulges[faceIndex];
+                var x = Mathf.Abs(localPoint[d]);
+                var inner = Mathf.Min(HalfBoxSize, x);
+                var outer = Mathf.Max(0, x - HalfBoxSize);
+                outer *= bulge;
+                localPoint[d] = Mathf.Sign(localPoint[d]) * (inner + outer);
+            }
+
+            return localPoint;
+        }
+
+        private Vector3 InvertBulge(Vector3 localPoint)
+        {
+            for (var d = 0; d < 3; d++)
+            {
+                var v = Vector3.zero;
+                v[d] = localPoint[d];
+                var faceIndex = FindFaceIndex(v);
+                var bulge = _bulges[faceIndex];
+                if (bulge == 0)
                 {
-                    var inner = Mathf.Min(HalfBoxSize, Mathf.Abs(localPoint[d]));
-                    var outer = Mathf.Max(0, Mathf.Abs(localPoint[d]) - HalfBoxSize);
-                    outer *= 1 / bulge;
-                    localPoint[d] = Mathf.Sign(localPoint[d]) * (inner + outer);
+                    continue;
                 }
+                var x = Mathf.Abs(localPoint[d]);
+                var inner = Mathf.Min(HalfBoxSize, x);
+                var outer = Mathf.Max(0, x - HalfBoxSize);
+                outer *= 1 / bulge;
+                localPoint[d] = Mathf.Sign(localPoint[d]) * (inner + outer);
             }
 
             return localPoint;
@@ -133,6 +182,20 @@ namespace CompactProjectiles
                 }
             }
             return faceIndex;
+        }
+
+        public Vector3 GetSurfacePoint(Vector3 direction)
+        {
+            var localDirection = WorldToSphereDirection(direction);
+            return SphereToWorldPoint(localDirection * LocalSphereRadius);
+        }
+
+        public void GetClosestSurfacePoint(Vector3 direction, out Vector3 point, out Vector3 normal)
+        {
+            var localDirection = WorldToSphereDirection(direction);
+            var localPoint = localDirection * LocalSphereRadius;
+            point = SphereToWorldPoint(localPoint);
+            normal = SphereToWorldDirection(localPoint).normalized;
         }
     }
 }

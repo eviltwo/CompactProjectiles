@@ -8,10 +8,12 @@ namespace CompactProjectiles
 
         public bool BulgeEachFace = false;
 
+        public float[] FaceBulges = new float[6];
+
         public int LineCount = 8;
 
         private BulgingBox _bulgingBox;
-        private BulgingBox BulgingBox
+        public BulgingBox BulgingBox
         {
             get
             {
@@ -23,7 +25,14 @@ namespace CompactProjectiles
                 _bulgingBox.Position = transform.position;
                 _bulgingBox.Rotation = transform.rotation;
                 _bulgingBox.Scale = transform.localScale;
-                if (!BulgeEachFace)
+                if (BulgeEachFace)
+                {
+                    for (int i = 0; i < 6; i++)
+                    {
+                        _bulgingBox.SetBulge(i, FaceBulges[i]);
+                    }
+                }
+                else
                 {
                     _bulgingBox.SetBulge(BulgeAmount);
                 }
@@ -67,7 +76,7 @@ namespace CompactProjectiles
                     var p2 = dir;
                     p2[d1] = Mathf.Cos(rad) * r;
                     p2[d2] = Mathf.Sin(rad) * r;
-                    Gizmos.DrawLine(box.SphereToWorld(p1), box.SphereToWorld(p2));
+                    Gizmos.DrawLine(box.SphereToWorldPoint(p1), box.SphereToWorldPoint(p2));
                 }
             }
         }

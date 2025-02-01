@@ -27,8 +27,8 @@ namespace CompactProjectiles.Tests
         public void CollectTransformAndInvert(float x, float y, float z, float bulge)
         {
             _box.SetBulge(bulge);
-            var local = _box.WorldToSphere(new Vector3(x, y, z));
-            var world = _box.SphereToWorld(local);
+            var local = _box.WorldToSpherePoint(new Vector3(x, y, z));
+            var world = _box.SphereToWorldPoint(local);
             Assert.AreEqual(x, world.x);
             Assert.AreEqual(y, world.y);
             Assert.AreEqual(z, world.z);
