@@ -1,4 +1,4 @@
-# CompactProjectiles
+# Compact Projectiles
 This package is a physics simulation of a Box that does not use Rigidbody. It is suitable for use as an effect.
 
 At the start and upon each collision, one to three SphereCasts are executed to simulate the parabolic trajectory until the next collision. While in the air, it only reproduces the simulation results without performing calculations.
