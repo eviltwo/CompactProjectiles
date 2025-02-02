@@ -21,6 +21,8 @@ namespace CompactProjectiles
 
         public float VelocityForward = 5f;
 
+        public float AngularDrag = 0.1f;
+
         public LayerMask LayerMask = -1;
 
         public int SimulationCount = 1;
@@ -53,6 +55,9 @@ namespace CompactProjectiles
             var projectile = new BoxProjectile(ShapeData, PhysicsMaterial);
             projectile.Position = transform.position;
             projectile.Velocity = velocity;
+            projectile.Rotation = transform.rotation;
+            projectile.AngularVelocity = Vector3.zero;
+            projectile.AngularDrag = AngularDrag;
             projectile.StepAngle = StepAngle;
             projectile.ErrorDistance = ErrorDistance;
             projectile.MaxDuration = MaxDuration;
@@ -80,7 +85,7 @@ namespace CompactProjectiles
                 Gizmos.color = Color.red;
                 for (var t = 0f; t < data.Duration && t < 10; t += lineDrawStep)
                 {
-                    ProjectileUtility.LaunchSimulation(data, t, out var p);
+                    ProjectileUtility.Trace(data, t, out var p, out _);
                     Gizmos.DrawLine(lastPos, p);
                     lastPos = p;
                 }
@@ -94,9 +99,8 @@ namespace CompactProjectiles
                 Gizmos.color = new Color(1, 0, 0, 0.25f);
                 for (var t = 0f; t < data.Duration && t < 10; t += cubeDrawStep)
                 {
-                    ProjectileUtility.LaunchSimulation(data, t, out var p);
-                    var rot = ProjectileUtility.ApplyAngularVelocity(data.Rotation, data.AngularVelocity, t);
-                    Gizmos.matrix = Matrix4x4.TRS(p, rot, Vector3.one);
+                    ProjectileUtility.Trace(data, t, out var p, out var r);
+                    Gizmos.matrix = Matrix4x4.TRS(p, r, Vector3.one);
                     Gizmos.DrawWireCube(Vector3.zero, ShapeData.Size);
                 }
                 Gizmos.matrix = Matrix4x4.identity;
@@ -137,7 +141,7 @@ namespace CompactProjectiles
                     lastPos = customData.Position;
                     for (var t = 0f; t < customData.Duration; t += lineDrawStep)
                     {
-                        ProjectileUtility.LaunchSimulation(customData, t, out var p);
+                        ProjectileUtility.Trace(customData, t, out var p, out _);
                         Gizmos.DrawLine(lastPos, p);
                         lastPos = p;
                     }

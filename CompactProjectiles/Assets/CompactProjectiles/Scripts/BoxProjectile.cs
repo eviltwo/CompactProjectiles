@@ -9,6 +9,7 @@ namespace CompactProjectiles
         public Vector3 Velocity;
         public Quaternion Rotation;
         public Vector3 AngularVelocity;
+        public float AngularDrag;
         public float Gravity;
         public float Duration;
     }
@@ -51,6 +52,8 @@ namespace CompactProjectiles
         // É÷ : angular velocity
         // rMQ : vector from M to Q (M is the instant center of rotation)
         public Vector3 AngularVelocity;
+
+        public float AngularDrag = 0.05f;
 
         public float StepAngle = 45f;
 
@@ -183,6 +186,7 @@ namespace CompactProjectiles
                                 Velocity = Vector3.zero,
                                 Rotation = startRotation,
                                 AngularVelocity = Vector3.zero,
+                                AngularDrag = AngularDrag,
                                 Gravity = g,
                                 Duration = 0f,
                             };
@@ -216,13 +220,14 @@ namespace CompactProjectiles
                             Velocity = v0,
                             Rotation = startRotation,
                             AngularVelocity = startAngularVelocity,
+                            AngularDrag = AngularDrag,
                             Gravity = g,
                             Duration = hit_t,
                         };
 
                         // Calculate the position and velocity after reflection.
                         Position = hit_p;
-                        Rotation = ProjectileUtility.ApplyAngularVelocity(startRotation, startAngularVelocity, hit_t);
+                        Rotation = ProjectileUtility.TraceLaunchedRotation(startRotation, startAngularVelocity, AngularDrag, hit_t);
                         Velocity = launchData.Velocity + Vector3.up * g * hit_t;
 
                         _box.Position = Position;
@@ -263,7 +268,7 @@ namespace CompactProjectiles
 
                     Position = stepped_p;
                     Velocity = stepped_v;
-                    Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, stepped_t);
+                    Rotation = ProjectileUtility.TraceLaunchedRotation(virtualRotation, virtualAngularVelocity, AngularDrag, stepped_t);
                     _box.Position = Position;
                     _box.Rotation = Rotation;
                 }
@@ -277,7 +282,7 @@ namespace CompactProjectiles
                 {
                     Position = virtualPosition;
                     Velocity = virtualVelocity;
-                    Rotation = ProjectileUtility.ApplyAngularVelocity(virtualRotation, virtualAngularVelocity, totalAirTime);
+                    Rotation = ProjectileUtility.TraceLaunchedRotation(virtualRotation, virtualAngularVelocity, AngularDrag, totalAirTime);
                     _box.Position = Position;
                     _box.Rotation = Rotation;
                     break;
@@ -290,6 +295,7 @@ namespace CompactProjectiles
                 Velocity = startVelocity,
                 Rotation = startRotation,
                 AngularVelocity = startAngularVelocity,
+                AngularDrag = AngularDrag,
                 Gravity = g,
                 Duration = totalAirTime,
             };

@@ -22,6 +22,8 @@ namespace CompactProjectiles
 
         public Vector3 StartAngularVelocity = Vector3.zero;
 
+        public float AngularDrag = 0.1f;
+
         private BoxProjectile _projectile;
 
         private LaunchData _lastLaunchData;
@@ -51,9 +53,10 @@ namespace CompactProjectiles
         private void Update()
         {
             _animElapsedTime += Time.deltaTime;
-            if (_lastLaunchData == null || _animElapsedTime >= _lastLaunchData.Duration)
+            if (_lastLaunchData == null || (!_projectile.IsSleep && _animElapsedTime >= _lastLaunchData.Duration))
             {
                 _animElapsedTime -= _lastLaunchData?.Duration ?? 0;
+                _projectile.AngularDrag = AngularDrag;
                 _projectile.StepAngle = StepAngle;
                 _projectile.ErrorDistance = ErrorDistance;
                 _projectile.MaxDuration = MaxDuration;
@@ -64,15 +67,12 @@ namespace CompactProjectiles
 
             if (_projectile.IsSleep)
             {
-                transform.position = _projectile.Position;
-                transform.rotation = _projectile.Rotation;
+                transform.SetPositionAndRotation(_projectile.Position, _projectile.Rotation);
             }
             else
             {
-                ProjectileUtility.LaunchSimulation(_lastLaunchData, _animElapsedTime, out var p);
-                transform.position = p;
-                var angularVelocity = _lastLaunchData.AngularVelocity;
-                transform.rotation = ProjectileUtility.ApplyAngularVelocity(_lastLaunchData.Rotation, angularVelocity, _animElapsedTime);
+                ProjectileUtility.Trace(_lastLaunchData, _animElapsedTime, out var p, out var r);
+                transform.SetPositionAndRotation(p, r);
             }
         }
 
