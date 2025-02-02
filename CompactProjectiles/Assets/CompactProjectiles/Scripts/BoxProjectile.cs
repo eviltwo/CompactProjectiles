@@ -11,10 +11,6 @@ namespace CompactProjectiles
         public Vector3 AngularVelocity;
         public float Gravity;
         public float Duration;
-        public bool IsHit;
-        public Vector3 HitPoint;
-        public Vector3 HitNormal;
-        public bool IsSleep;
     }
 
     public class BoxProjectile
@@ -72,6 +68,8 @@ namespace CompactProjectiles
 
         public float SleepVelocityThreshold = 0.1f;
 
+        public bool IsSleep;
+
         private SimulationState _state = new SimulationState();
         public SimulationState LastSimulationState => _state;
 
@@ -83,13 +81,15 @@ namespace CompactProjectiles
             public int IterationCount;
             public int RaycastCount;
             public List<Vector3> RaycastPositionLog = new List<Vector3>();
-            public Vector3 BoxHitPosition;
+            public bool IsHit;
+            public Vector3 HitPosition;
+            public Vector3 HitNormal;
             public void Clear()
             {
                 IterationCount = 0;
                 RaycastCount = 0;
                 RaycastPositionLog.Clear();
-                BoxHitPosition = Vector3.zero;
+                IsHit = false;
             }
         }
 
@@ -119,7 +119,7 @@ namespace CompactProjectiles
             var virtualAngularVelocity = AngularVelocity;
             var totalAirTime = 0f;
             var g = Gravity;
-            var r = Mathf.Max(Shape.Size.x, Shape.Size.y, Shape.Size.z) * 0.5f;
+            var r = (Shape.Size.x + Shape.Size.y + Shape.Size.z) / 3 * 0.5f;
             var maxItterations = 100;
             var raycastSkippedTotalDistance = 0f;
             _state.Clear();
@@ -176,6 +176,7 @@ namespace CompactProjectiles
                         if (hit_diff_from_st.sqrMagnitude < SleepPositionThreshold * SleepPositionThreshold
                             && startVelocity.sqrMagnitude < SleepVelocityThreshold * SleepVelocityThreshold)
                         {
+                            IsSleep = true;
                             return new LaunchData
                             {
                                 Position = startPosition,
@@ -184,8 +185,6 @@ namespace CompactProjectiles
                                 AngularVelocity = Vector3.zero,
                                 Gravity = g,
                                 Duration = 0f,
-                                IsHit = false,
-                                IsSleep = true,
                             };
                         }
 
@@ -208,6 +207,8 @@ namespace CompactProjectiles
                         hit_t = Mathf.Clamp(hit_t, 0.0001f, 100f);
                         var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
 
+
+
                         // Finalize the launch data.
                         var launchData = new LaunchData
                         {
@@ -217,9 +218,6 @@ namespace CompactProjectiles
                             AngularVelocity = startAngularVelocity,
                             Gravity = g,
                             Duration = hit_t,
-                            IsHit = true,
-                            HitPoint = hit.point,
-                            HitNormal = hit.normal,
                         };
 
                         // Calculate the position and velocity after reflection.
@@ -229,30 +227,35 @@ namespace CompactProjectiles
 
                         _box.Position = Position;
                         _box.Rotation = Rotation;
-                        var hitPosition = _box.GetClosestSurfaceWithPlane(hit.normal);
-                        _state.BoxHitPosition = hitPosition;
-                        var hitNormal = (Position - hitPosition).normalized;
+                        var boxHitPosition = _box.GetClosestSurfaceWithPlane(hit.normal);
+                        var boxHitNormal = (Position - boxHitPosition).normalized;
+                        _state.IsHit = true;
+                        _state.HitPosition = boxHitPosition;
+                        _state.HitNormal = boxHitNormal;
 
-                        Velocity = Vector3.Reflect(Velocity, hitNormal);
-
-                        if (PhysicsMaterial == null)
+                        if (Vector3.Dot(Velocity, boxHitNormal) < 0)
                         {
-                            Velocity -= Vector3.Project(Velocity, hitNormal) * 0.5f;
-                        }
-                        else
-                        {
-                            var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
-                            var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
-                            var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
-                            Velocity -= Vector3.ProjectOnPlane(Velocity, hitNormal) * friction;
-                            var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
-                            var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
-                            Velocity -= Vector3.Project(Velocity, hitNormal) * (1 - bounce);
+                            Velocity = Vector3.Reflect(Velocity, boxHitNormal);
+                            if (PhysicsMaterial == null)
+                            {
+                                Velocity -= Vector3.Project(Velocity, boxHitNormal) * 0.5f;
+                            }
+                            else
+                            {
+                                var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
+                                var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
+                                var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
+                                friction *= 1 - Mathf.Clamp(Vector3.Distance(hit.point, boxHitPosition) / (r * 0.5f), 0, 1);
+                                Velocity -= Vector3.ProjectOnPlane(Velocity, boxHitNormal) * friction;
+                                var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
+                                var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
+                                Velocity -= Vector3.Project(Velocity, boxHitNormal) * (1 - bounce);
+                            }
                         }
 
                         // Calculate angular velocity
-                        var planeV = Vector3.ProjectOnPlane(Velocity, hitNormal);
-                        var axis = Vector3.Cross(hit.normal, planeV.normalized);
+                        var planeV = Vector3.ProjectOnPlane(Velocity, boxHitNormal);
+                        var axis = Vector3.Cross(boxHitNormal, planeV.normalized);
                         AngularVelocity = axis * (planeV.magnitude / r);
 
                         return launchData;
@@ -285,10 +288,10 @@ namespace CompactProjectiles
             {
                 Position = startPosition,
                 Velocity = startVelocity,
+                Rotation = startRotation,
+                AngularVelocity = startAngularVelocity,
                 Gravity = g,
                 Duration = totalAirTime,
-                IsHit = false,
-                IsSleep = false,
             };
         }
 
@@ -349,6 +352,11 @@ namespace CompactProjectiles
 
         public static Quaternion ApplyAngularVelocity(Quaternion rotation, Vector3 angularVelocity, float deltaTime)
         {
+            if (angularVelocity.sqrMagnitude == 0)
+            {
+                return rotation;
+            }
+
             var axis = angularVelocity.normalized;
             var angle = angularVelocity.magnitude * Mathf.Rad2Deg * deltaTime;
             return Quaternion.AngleAxis(angle, axis) * rotation;

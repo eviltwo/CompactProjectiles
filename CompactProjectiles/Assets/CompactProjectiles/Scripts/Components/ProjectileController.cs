@@ -16,25 +16,36 @@ namespace CompactProjectiles
 
         public int MaxRaycastCount = 5;
 
-        public Vector3 Velocity = Vector3.right;
+        public LayerMask LayerMask = -1;
 
-        public Vector3 AngularVelocity = Vector3.zero;
+        public Vector3 StartVelocity = Vector3.right;
+
+        public Vector3 StartAngularVelocity = Vector3.zero;
 
         private BoxProjectile _projectile;
-
-        public LayerMask LayerMask = -1;
 
         private LaunchData _lastLaunchData;
         private float _animElapsedTime;
 
-        private void Awake()
+        public bool IsSleep => _projectile.IsSleep;
+
+        public void Launch(Vector3 velocity, Vector3 angularVelocity)
+        {
+            _projectile.Position = transform.position;
+            _projectile.Velocity = velocity;
+            _projectile.Rotation = transform.rotation;
+            _projectile.AngularVelocity = angularVelocity;
+            _projectile.IsSleep = false;
+        }
+
+        private void Start()
         {
             ShapeData.Size = Vector3.Scale(ShapeData.Size, transform.localScale);
             _projectile = new BoxProjectile(ShapeData, PhysicsMaterial);
             _projectile.Position = transform.position;
-            _projectile.Velocity = Velocity;
+            _projectile.Velocity = StartVelocity;
             _projectile.Rotation = transform.rotation;
-            _projectile.AngularVelocity = AngularVelocity;
+            _projectile.AngularVelocity = StartAngularVelocity;
         }
 
         private void Update()
@@ -51,7 +62,7 @@ namespace CompactProjectiles
                 _lastLaunchData = _projectile.Simulate();
             }
 
-            if (_lastLaunchData.IsSleep)
+            if (_projectile.IsSleep)
             {
                 transform.position = _projectile.Position;
                 transform.rotation = _projectile.Rotation;
@@ -65,6 +76,8 @@ namespace CompactProjectiles
             }
         }
 
+        private static Color SleepColor = new Color(0f, 0f, 0.5f, 0.5f);
+        private static Color ActiveColor = new Color(0.5f, 0f, 0f, 0.5f);
         private void OnDrawGizmosSelected()
         {
             if (!Application.isPlaying)
@@ -72,11 +85,14 @@ namespace CompactProjectiles
                 return;
             }
 
-            Gizmos.color = _lastLaunchData.IsSleep ? Color.blue : Color.red;
+            Gizmos.color = _projectile.IsSleep ? SleepColor : ActiveColor;
             BulgingBoxUtility.DrawBoxGizmos(_projectile.Box, 5);
 
             Gizmos.color = Color.red;
-            Gizmos.DrawSphere(_projectile.LastSimulationState.BoxHitPosition, 0.1f);
+            Gizmos.DrawSphere(_projectile.LastSimulationState.HitPosition, 0.1f);
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(_projectile.LastSimulationState.HitPosition, _lastLaunchData.Position + _lastLaunchData.Velocity);
         }
     }
 }

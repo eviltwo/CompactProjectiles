@@ -245,15 +245,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ec1cb3a630294c47b7d5f7d4d5cf6a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BulgeAmount: 0.5
-  BulgeEachFace: 0
+  BulgeAmount: 0
+  BulgeEachFace: 1
   FaceBulges:
   - 0.62
-  - 0.1
+  - 0
   - 0.5
-  - 0.1
+  - 0
   - 1
-  - 0.1
+  - 0
   LineCount: 16
 --- !u!4 &532749683
 Transform:
@@ -509,13 +509,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1425457719}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.07449702, y: -0.56367546, z: 0.8160956, w: 0.103479795}
+  m_LocalRotation: {x: 0.14463703, y: -0.5526443, z: 0.8066239, w: 0.15173133}
   m_LocalPosition: {x: 0.388, y: 0, z: 1.116}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 110.7, y: -179.2, z: -13.9}
+  m_LocalEulerAnglesHint: {x: 110.7, y: -169.3, z: -13.9}
 --- !u!1 &1797097434
 GameObject:
   m_ObjectHideFlags: 0
@@ -554,13 +554,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1797097434}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.6050575, y: 0.3659309, z: -0.3659309, w: 0.6050575}
-  m_LocalPosition: {x: -1.116, y: -0, z: -0.033}
+  m_LocalRotation: {x: 0.5434412, y: 0.4552426, z: -0.47240654, w: 0.52369636}
+  m_LocalPosition: {x: -0.95, y: -0.061, z: -0.484}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 62.33, z: 0}
+  m_LocalEulerAnglesHint: {x: 92.12, y: -638, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

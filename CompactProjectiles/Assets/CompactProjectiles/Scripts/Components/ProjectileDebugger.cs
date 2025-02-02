@@ -1,3 +1,4 @@
+using System.Text;
 using UnityEngine;
 
 namespace CompactProjectiles
@@ -19,8 +20,6 @@ namespace CompactProjectiles
         public float VelocityUp = 5f;
 
         public float VelocityForward = 5f;
-
-        private BoxProjectile _projectile;
 
         public LayerMask LayerMask = -1;
 
@@ -48,6 +47,7 @@ namespace CompactProjectiles
             }
         }
 
+        private static StringBuilder _infoBuilder = new StringBuilder();
         private void SimulateAndDrawGizmos(Vector3 velocity)
         {
             var projectile = new BoxProjectile(ShapeData, PhysicsMaterial);
@@ -64,11 +64,13 @@ namespace CompactProjectiles
                 {
                     Position = projectile.Position,
                     Velocity = projectile.Velocity,
+                    Rotation = projectile.Rotation,
                     Gravity = projectile.Gravity,
                 };
 
                 var data = projectile.Simulate();
-                if (data.IsSleep)
+                var state = projectile.LastSimulationState;
+                if (projectile.IsSleep)
                 {
                     break;
                 }
@@ -83,7 +85,6 @@ namespace CompactProjectiles
                     lastPos = p;
                 }
 
-                var state = projectile.LastSimulationState;
                 foreach (var pos in state.RaycastPositionLog)
                 {
                     Gizmos.DrawSphere(pos, 0.1f);
@@ -106,15 +107,25 @@ namespace CompactProjectiles
                 Gizmos.matrix = Matrix4x4.identity;
 
 #if UNITY_EDITOR
-                if (DrawInfo)
+                if (DrawInfo && i == SimulationCount - 1)
                 {
                     var oldColor = GUI.backgroundColor;
-                    GUI.backgroundColor = new Color(0, 0, 0, 0.5f);
+                    GUI.backgroundColor = new Color(0, 0, 0, 0.8f);
                     var guiStyle = new GUIStyle(GUI.skin.label);
                     guiStyle.alignment = TextAnchor.LowerLeft;
                     guiStyle.normal.background = Texture2D.whiteTexture;
-                    var labelPos = data.IsHit ? data.HitPoint : data.Position;
-                    UnityEditor.Handles.Label(labelPos + Vector3.up, $"t: {data.Duration}\nitr:{state.IterationCount}\nraycast: {state.RaycastCount}", guiStyle);
+                    var labelPos = state.IsHit ? state.HitPosition : data.Position;
+                    _infoBuilder.Clear();
+                    _infoBuilder.Append($"t: {data.Duration},");
+                    _infoBuilder.Append($"itr: {state.IterationCount},");
+                    _infoBuilder.AppendLine($"ray: {state.RaycastCount}");
+                    _infoBuilder.AppendLine($"p: {projectile.Position},");
+                    _infoBuilder.AppendLine($"v: {projectile.Velocity}");
+                    _infoBuilder.AppendLine($"r: {projectile.Rotation},");
+                    _infoBuilder.AppendLine($"a: {projectile.AngularVelocity}");
+                    _infoBuilder.Append($"hit: {state.IsHit},");
+                    _infoBuilder.Append($"hitN: {state.HitNormal}");
+                    UnityEditor.Handles.Label(labelPos + Vector3.up, _infoBuilder.ToString(), guiStyle);
                     GUI.backgroundColor = oldColor;
                 }
 #endif

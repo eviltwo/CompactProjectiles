@@ -193,7 +193,70 @@ namespace CompactProjectiles
         public Vector3 GetClosestSurfaceWithPlane(Vector3 normal)
         {
             var dir = WorldToSphereDirection(-normal);
-            return SphereToWorldPoint(dir * LocalSphereRadius);
+            var boxSurfacePoint = SphereToWorldPoint(dir * LocalSphereRadius);
+
+            var faceIndex = FindFaceIndex(dir);
+            var bulge = _bulges[faceIndex];
+            if (bulge == 1)
+            {
+                return boxSurfacePoint;
+            }
+
+            var cubeSurfacePoint = GetClosestCubeSurfaceWithPlane(normal);
+            return Vector3.Lerp(cubeSurfacePoint, boxSurfacePoint, bulge);
+        }
+
+        private static Vector3[] CubeVertices = new Vector3[8]
+        {
+            new Vector3(-1, -1, -1),
+            new Vector3(-1, -1, 1),
+            new Vector3(-1, 1, -1),
+            new Vector3(-1, 1, 1),
+            new Vector3(1, -1, -1),
+            new Vector3(1, -1, 1),
+            new Vector3(1, 1, -1),
+            new Vector3(1, 1, 1)
+        };
+
+        private static Vector3[] _cubeVertBuffer = new Vector3[8];
+        private static float[] _cubeDistanceBuffer = new float[8];
+        private static float _cubeVertexError = 0.1f;
+        private Vector3 GetClosestCubeSurfaceWithPlane(Vector3 normal)
+        {
+            var matrix = Matrix4x4.TRS(Position, Rotation, Scale);
+
+            for (var i = 0; i < 8; i++)
+            {
+                _cubeVertBuffer[i] = matrix.MultiplyPoint3x4(CubeVertices[i] * HalfBoxSize);
+            }
+
+            for (var i = 0; i < 8; i++)
+            {
+                _cubeDistanceBuffer[i] = Vector3.Dot(_cubeVertBuffer[i], normal);
+            }
+
+            var minDistance = float.MaxValue;
+            for (var i = 0; i < 8; i++)
+            {
+                var distance = _cubeDistanceBuffer[i];
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                }
+            }
+
+            var closestPointTotal = Vector3.zero;
+            var closestPointCount = 0;
+            for (var i = 0; i < 8; i++)
+            {
+                if (Mathf.Abs(_cubeDistanceBuffer[i] - minDistance) < _cubeVertexError)
+                {
+                    closestPointTotal += _cubeVertBuffer[i];
+                    closestPointCount++;
+                }
+            }
+
+            return closestPointTotal / closestPointCount;
         }
     }
 }
