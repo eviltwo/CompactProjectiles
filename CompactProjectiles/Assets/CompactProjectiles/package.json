@@ -1,0 +1,17 @@
+{
+    "name": "com.eviltwo.compact-projectiles",
+    "displayName": "Compact Projectiles",
+    "version": "0.5.0",
+    "unity": "6000.0",
+    "description": "This package is a physics simulation of a Box that does not use Rigidbody. It is suitable for use as an effect.",
+    "author": {
+        "name": "DAIKI(eviltwo)",
+        "url": "https://github.com/eviltwo"
+    },
+
+    "keywords": [
+    ],
+
+    "dependencies": {
+    }
+}
