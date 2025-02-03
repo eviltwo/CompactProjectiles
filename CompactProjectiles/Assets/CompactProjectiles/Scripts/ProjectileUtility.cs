@@ -20,13 +20,13 @@ namespace CompactProjectiles
         {
             if (angularVelocity.sqrMagnitude == 0)
             {
-                return rotation;
+                return rotation.normalized;
             }
 
             var stepDrag = Mathf.Max(0, angularDrag * SimulationTimeStep);
             if (stepDrag >= 1)
             {
-                return rotation;
+                return rotation.normalized;
             }
             var stepVelocity = angularVelocity * SimulationTimeStep;
             var axis = angularVelocity.normalized;
@@ -46,8 +46,7 @@ namespace CompactProjectiles
                 rotation = Quaternion.AngleAxis(stepVelocity.magnitude * Mathf.Rad2Deg, axis) * rotation;
             }
 
-            rotation.Normalize();
-            return rotation;
+            return rotation.normalized;
         }
 
         public static PhysicsMaterialCombine MergePhysicsMaterialCombine(PhysicsMaterialCombine a, PhysicsMaterialCombine b)
