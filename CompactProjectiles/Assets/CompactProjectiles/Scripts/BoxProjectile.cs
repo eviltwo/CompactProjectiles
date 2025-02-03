@@ -158,6 +158,7 @@ namespace CompactProjectiles
 
                 var stepped_p = p + v * stepped_t + Vector3.up * (0.5f * g * stepped_t * stepped_t);
                 var stepped_v = v + Vector3.up * g * stepped_t;
+                var stepped_r = ProjectileUtility.TraceLaunchedRotation(virtualRotation, virtualAngularVelocity, AngularDrag, stepped_t);
 
                 // Execute the raycast or proceed to the next step without doing anything.
                 var toSteppedVec = stepped_p - p;
@@ -268,7 +269,7 @@ namespace CompactProjectiles
 
                     Position = stepped_p;
                     Velocity = stepped_v;
-                    Rotation = ProjectileUtility.TraceLaunchedRotation(virtualRotation, virtualAngularVelocity, AngularDrag, stepped_t);
+                    Rotation = stepped_r;
                     _box.Position = Position;
                     _box.Rotation = Rotation;
                 }
@@ -277,6 +278,7 @@ namespace CompactProjectiles
                 // The transform is not finalized until the raycast is complete.
                 virtualPosition = stepped_p;
                 virtualVelocity = stepped_v;
+                virtualRotation = stepped_r;
                 totalAirTime += stepped_t;
                 if (_state.RaycastCount >= MaxRaycastCount || totalAirTime >= MaxDuration)
                 {
