@@ -167,11 +167,12 @@ namespace CompactProjectiles
                 var raycastRequired = raycastSkippedTotalDistance > ErrorDistance;
                 if (raycastRequired)
                 {
-                    _state.RaycastPositionLog.Add(Position);
-                    var rayVec = stepped_p - Position; // Start from the point where the last raycast was completed.
                     raycastSkippedTotalDistance = 0f;
                     _state.RaycastCount++;
-                    if (Physics.SphereCast(Position, r - SpaceToWall, rayVec.normalized, out var hit, rayVec.magnitude, LayerMask))
+                    _state.RaycastPositionLog.Add(Position);
+                    var rayVec = stepped_p - Position; // Start from the point where the last raycast was completed.
+                    var ray = new Ray(Position, rayVec.normalized);
+                    if (Physics.SphereCast(ray, r - SpaceToWall, out var hit, rayVec.magnitude, LayerMask))
                     {
                         var hit_p = hit.point + hit.normal * r;
                         var hit_diff_from_st = hit_p - startPosition;
@@ -199,7 +200,7 @@ namespace CompactProjectiles
                         var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
                         var hit_t = 0f;
                         var v0y = 0f;
-                        if (st_v2.x > 0)
+                        if (st_v2.x > 0 && hit_diff2_from_st.x > 0)
                         {
                             hit_t = hit_diff2_from_st.x / st_v2.x;
                             v0y = (hit_diff2_from_st.y - 0.5f * g * hit_t * hit_t) / hit_t;
@@ -211,8 +212,6 @@ namespace CompactProjectiles
                         }
                         hit_t = Mathf.Clamp(hit_t, 0.0001f, 100f);
                         var v0 = new Vector3(startVelocity.x, v0y, startVelocity.z);
-
-
 
                         // Finalize the launch data.
                         var launchData = new LaunchData
@@ -230,6 +229,7 @@ namespace CompactProjectiles
                         Position = hit_p;
                         Rotation = ProjectileUtility.TraceLaunchedRotation(startRotation, startAngularVelocity, AngularDrag, hit_t);
                         Velocity = launchData.Velocity + Vector3.up * g * hit_t;
+                        var hitVelocity = Velocity;
 
                         _box.Position = Position;
                         _box.Rotation = Rotation;
@@ -239,30 +239,32 @@ namespace CompactProjectiles
                         _state.HitPosition = boxHitPosition;
                         _state.HitNormal = boxHitNormal;
 
-                        if (Vector3.Dot(Velocity, boxHitNormal) < 0)
+                        if (Vector3.Dot(Velocity, boxHitNormal) > 0)
                         {
-                            Velocity = Vector3.Reflect(Velocity, boxHitNormal);
-                            if (PhysicsMaterial == null)
-                            {
-                                Velocity -= Vector3.Project(Velocity, boxHitNormal) * 0.5f;
-                            }
-                            else
-                            {
-                                var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
-                                var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
-                                var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
-                                friction *= 1 - Mathf.Clamp(Vector3.Distance(hit.point, boxHitPosition) / (r * 0.5f), 0, 1);
-                                Velocity -= Vector3.ProjectOnPlane(Velocity, boxHitNormal) * friction;
-                                var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
-                                var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
-                                Velocity -= Vector3.Project(Velocity, boxHitNormal) * (1 - bounce);
-                            }
+                            boxHitPosition = hit.point;
+                            boxHitNormal = hit.normal;
+                        }
+
+                        Velocity = Vector3.Reflect(Velocity, boxHitNormal);
+                        if (PhysicsMaterial == null)
+                        {
+                            Velocity -= Vector3.Project(Velocity, boxHitNormal) * 0.5f;
+                        }
+                        else
+                        {
+                            var hitMat = hit.collider.sharedMaterial ?? PhysicsMaterial;
+                            var frictionCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.frictionCombine, hitMat.frictionCombine);
+                            var friction = ProjectileUtility.CombineFriction(frictionCombine, PhysicsMaterial.dynamicFriction, hitMat.dynamicFriction);
+                            friction *= 1 - Mathf.Clamp(Vector3.Distance(hit.point, boxHitPosition) / (r * 0.5f), 0, 1);
+                            Velocity -= Vector3.ProjectOnPlane(Velocity, boxHitNormal) * friction;
+                            var bounceCombine = ProjectileUtility.MergePhysicsMaterialCombine(PhysicsMaterial.bounceCombine, hitMat.bounceCombine);
+                            var bounce = ProjectileUtility.CombineFriction(bounceCombine, PhysicsMaterial.bounciness, hitMat.bounciness);
+                            Velocity -= Vector3.Project(Velocity, boxHitNormal) * (1 - bounce);
                         }
 
                         // Calculate angular velocity
-                        var planeV = Vector3.ProjectOnPlane(Velocity, boxHitNormal);
-                        var axis = Vector3.Cross(boxHitNormal, planeV.normalized);
-                        AngularVelocity = axis * (planeV.magnitude / r);
+                        var hitDist = Vector3.Distance(Position, boxHitPosition);
+                        AngularVelocity = Vector3.Cross(boxHitNormal, Velocity) / hitDist;
 
                         return launchData;
                     }

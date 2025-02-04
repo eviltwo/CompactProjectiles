@@ -1,7 +1,7 @@
 {
     "name": "com.eviltwo.compact-projectiles",
     "displayName": "Compact Projectiles",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "unity": "6000.0",
     "description": "This package is a physics simulation of a Box that does not use Rigidbody. It is suitable for use as an effect.",
     "author": {
