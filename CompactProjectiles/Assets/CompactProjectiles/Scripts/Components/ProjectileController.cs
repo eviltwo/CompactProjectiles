@@ -55,7 +55,8 @@ namespace CompactProjectiles
             _animElapsedTime += Time.deltaTime;
             if (_lastLaunchData == null || (!_projectile.IsSleep && _animElapsedTime >= _lastLaunchData.Duration))
             {
-                _animElapsedTime -= _lastLaunchData?.Duration ?? 0;
+                var duration = _lastLaunchData?.Duration ?? 0;
+                _animElapsedTime -= duration > Time.deltaTime ? duration : _animElapsedTime;
                 _projectile.AngularDrag = AngularDrag;
                 _projectile.StepAngle = StepAngle;
                 _projectile.ErrorDistance = ErrorDistance;
@@ -92,7 +93,10 @@ namespace CompactProjectiles
             Gizmos.DrawSphere(_projectile.LastSimulationState.HitPosition, 0.1f);
 
             Gizmos.color = Color.red;
-            Gizmos.DrawLine(_projectile.LastSimulationState.HitPosition, _lastLaunchData.Position + _lastLaunchData.Velocity);
+            Gizmos.DrawRay(_projectile.LastSimulationState.HitPosition, _projectile.LastSimulationState.HitNormal);
+
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(_projectile.LastSimulationState.HitPosition, _lastLaunchData.Velocity);
         }
     }
 }
