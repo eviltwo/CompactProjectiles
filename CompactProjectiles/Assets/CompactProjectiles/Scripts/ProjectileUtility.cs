@@ -16,6 +16,7 @@ namespace CompactProjectiles
         }
 
         public static float SimulationTimeStep = 0.02f;
+        public static int IterationSafetyLimit = 10000;
         public static Quaternion TraceLaunchedRotation(Quaternion rotation, Vector3 angularVelocity, float angularDrag, float deltaTime)
         {
             if (angularVelocity.sqrMagnitude == 0)
@@ -23,27 +24,25 @@ namespace CompactProjectiles
                 return rotation.normalized;
             }
 
-            var stepDrag = Mathf.Max(0, angularDrag * SimulationTimeStep);
-            if (stepDrag >= 1)
-            {
-                return rotation.normalized;
-            }
-            var stepVelocity = angularVelocity * SimulationTimeStep;
             var axis = angularVelocity.normalized;
             var t = 0f;
-            for (; t < deltaTime; t += SimulationTimeStep)
+            for (var i = 0; i < IterationSafetyLimit; i++)
             {
-                stepVelocity -= stepVelocity * stepDrag;
-                rotation = Quaternion.AngleAxis(stepVelocity.magnitude * Mathf.Rad2Deg, axis) * rotation;
+                t += SimulationTimeStep;
+                var stepDrag = Mathf.Clamp01(angularDrag * SimulationTimeStep);
+                angularVelocity -= angularVelocity * stepDrag;
+                rotation = Quaternion.AngleAxis(angularVelocity.magnitude * Mathf.Rad2Deg * SimulationTimeStep, axis) * rotation;
+                if (t + SimulationTimeStep >= deltaTime)
+                {
+                    break;
+                }
             }
 
             var remainT = deltaTime - t;
             if (remainT > 0)
             {
-                angularVelocity = stepVelocity / SimulationTimeStep;
-                stepVelocity = angularVelocity * remainT;
-                stepVelocity -= (angularVelocity * remainT) * (angularDrag * remainT);
-                rotation = Quaternion.AngleAxis(stepVelocity.magnitude * Mathf.Rad2Deg, axis) * rotation;
+                angularVelocity -= angularVelocity * angularDrag * remainT;
+                rotation = Quaternion.AngleAxis(angularVelocity.magnitude * Mathf.Rad2Deg * remainT, axis) * rotation;
             }
 
             return rotation.normalized;

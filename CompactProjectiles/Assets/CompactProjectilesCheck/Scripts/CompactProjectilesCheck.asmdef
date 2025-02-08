@@ -1,0 +1,16 @@
+{
+    "name": "CompactProjectilesCheck",
+    "rootNamespace": "CompactProjectilesCheck",
+    "references": [
+        "GUID:abc23c1473b6edc45a8fb81964b2a9d3"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
