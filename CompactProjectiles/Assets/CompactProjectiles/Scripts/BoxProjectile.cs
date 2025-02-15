@@ -177,11 +177,25 @@ namespace CompactProjectiles
                         var hit_p = hit.point + hit.normal * r;
                         var hit_diff_from_st = hit_p - startPosition;
 
-                        // Sleep check
+                        var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
+                        var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
+
+                        // Sleep if the projectile is not moving.
                         if (hit_diff_from_st.sqrMagnitude < SleepPositionThreshold * SleepPositionThreshold
                             && startVelocity.sqrMagnitude < SleepVelocityThreshold * SleepVelocityThreshold)
                         {
                             IsSleep = true;
+
+                        }
+
+                        // Sleep if speed xz is too slow. because difficult to calculate the time to hit.
+                        if (st_v2.x < SleepVelocityThreshold && Mathf.Abs(hit_diff_from_st.y) < SleepPositionThreshold)
+                        {
+                            IsSleep = true;
+                        }
+
+                        if (IsSleep)
+                        {
                             return new LaunchData
                             {
                                 Position = startPosition,
@@ -196,8 +210,6 @@ namespace CompactProjectiles
 
                         // Calculate time to hit and velocity.
                         // * Recalculate the initial velocity to match the parabola to the hit point.
-                        var hit_diff2_from_st = new Vector2(new Vector2(hit_diff_from_st.x, hit_diff_from_st.z).magnitude, hit_diff_from_st.y);
-                        var st_v2 = new Vector2(new Vector2(startVelocity.x, startVelocity.z).magnitude, startVelocity.y);
                         var hit_t = 0f;
                         var v0y = 0f;
                         if (st_v2.x > 0 && hit_diff2_from_st.x > 0)
